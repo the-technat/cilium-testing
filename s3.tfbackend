@@ -1,3 +1,0 @@
-  bucket     = "grapesstate"
-  key        = "salami-state"
-  region     = "eu-west-1"

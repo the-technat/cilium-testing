@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: fortio
+  name: fortio
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fortio
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: fortio
+    spec:
+      containers:
+      - image: fortio/fortio
+        name: fortio
+        args:
+        - load 
+        - -logger-force-color 
+        - http://

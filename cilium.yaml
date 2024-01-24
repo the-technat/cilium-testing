@@ -1,24 +1,40 @@
+cluster:
+  name: kind-cilium-testing
+ipam:
+  mode: kubernetes
+
+operator:
+  replicas: 1
+
+routingMode: tunnel
+
+bpf:
+  masquerade: true
+
+l7Proxy: false
+
+egressGateway:
+  enabled: true
+
+tunnelProtocol: vxlan
+
+
+kubeProxyReplacement: strict
+k8sServiceHost: cilium-testing-control-plane
+k8sServicePort: 6443  
+
+
+hostServices:
+  enabled: false
+externalIPs:
+  enabled: true
+nodePort:
+  enabled: true
+hostPort:
+  enabled: true
 hubble:
-  relay: 
+  enabled: true
+  relay:
     enabled: true
   ui:
     enabled: true
-
-rolloutCiliumPods: true
-
-eni:
-  enabled: true
-ipam:
-  mode: eni
-tunnel: disabled
-enableIPv4Masquerade: false
-
-# kube-proxy replacement
-# also requires ./kubectl -n kube-system delete daemonset kube-proxy --ignore-not-found in purge_aws_networking
-# cilium ingress gateway requires either partial or strict for the replacement
-kubeProxyReplacement: strict
-k8sServiceHost: ${cluster_endpoint}
-k8sServicePort: "443"
-
-# nodePort:
-#   enabled: true
