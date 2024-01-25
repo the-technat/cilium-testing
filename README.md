@@ -11,7 +11,7 @@ Kind is awesome to test many feature of cilium in a generic way.
 To create a new kind cluster I just do:
 
 ```
-kind create cluster --config clusters/kind.yaml
+kind create cluster --config clusters/kind/kind.yaml
 helm upgrade -i cilium --repo https://helm.cilium.io -n kube-system cilium/cilium -f configs/cilium-on-kind.yaml
 
 # Ingress (optional)
@@ -45,11 +45,11 @@ EKS is a unicorn when it comes to Kubernetes Networking. That's why I usually te
 To spin up a cluster, I use Terraform:
 
 ```
-aws configure --profile eks # use either assume-role or aws creds
-export AWS_PROFILE=eks # must be exported all the time for Terraform and you to find the creds
+aws configure --profile cilium-testing # use either assume-role or aws creds
+cd clusters/eks
 terraform init # uses local file backends
 terraform apply -auto-approve
-aws eks update-kubeconfig --name cilium-testing --alias cilium-testing
+aws eks update-kubeconfig --profile cilium-testing --name cilium-testing --alias cilium-testing
 ```
 
 ## Egress Gateway
@@ -60,7 +60,7 @@ To test the egress gateway feature do the following:
   - For kind this is as easy as `docker run -d --rm --network kind nginx` (grab the IP of the container)
   - For EKS: spin up another EC2 instance in the private subnets and install nginx 
     Note: spinning one up in the public net doesn't make a lot of sense since when trying the public IP
-    EKS is using the NAT gateway, so you would only see the IP of your NAT gateway
+    EKS is using the NAT gateway, so
 2. Deploy the `workload/egress-app.yaml` after you changed the URL in the YAML to your service
 3. Label one of your nodes with `technat.dev/egress-node=true`
 4. Check the access logs and analyze the IPs seen 

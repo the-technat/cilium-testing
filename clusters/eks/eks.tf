@@ -19,7 +19,7 @@ provider "kubernetes" {
     api_version = "client.authentication.k8s.io/v1beta1"
     command     = "aws"
     # This requires the awscli to be installed locally where Terraform is executed
-    args = ["eks", "get-token", "--cluster-name", module.eks.cluster_name, "--output", "json"]
+    args = ["--profile cilium-testing", "eks", "get-token", "--cluster-name", module.eks.cluster_name, "--output", "json"]
   }
 }
 provider "helm" {
@@ -30,7 +30,7 @@ provider "helm" {
       api_version = "client.authentication.k8s.io/v1beta1"
       command     = "aws"
       # This requires the awscli to be installed locally where Terraform is executed
-      args = ["eks", "get-token", "--cluster-name", module.eks.cluster_name, "--output", "json"]
+      args = ["--profile cilium-testing", "eks", "get-token", "--cluster-name", module.eks.cluster_name, "--output", "json"]
     }
   }
 }
@@ -90,6 +90,7 @@ module "eks" {
   subnet_ids                     = module.vpc.private_subnets
   cluster_service_ipv4_cidr      = "10.127.0.0/16"
   cluster_endpoint_public_access = true
+  cloudwatch_log_group_retention_in_days = 1
   attach_cluster_encryption_policy = false
   create_kms_key                   = false
   cluster_encryption_config        = {}
@@ -136,7 +137,7 @@ resource "null_resource" "purge_aws_networking" {
   }
   provisioner "local-exec" {
     command = <<EOT
-      aws eks --region ${local.region} update-kubeconfig --name ${local.name} --alias ${local.name}
+      aws --profile cilium-testing eks --region ${local.region} update-kubeconfig --name ${local.name} --alias ${local.name}
       curl -LO https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl
       chmod 0755 ./kubectl
       ./kubectl -n kube-system delete daemonset kube-proxy --ignore-not-found 
@@ -157,7 +158,7 @@ resource "helm_release" "cilium" {
   wait       = true
   timeout    = 3600
   values = [
-    templatefile("${path.module}/../configs/cilium-on-eks.yaml", {
+    templatefile("${path.module}/../../configs/cilium-on-eks.yaml", {
       cluster_endpoint = trim(module.eks.cluster_endpoint, "https://") # used for kube-proxy replacement
       name = local.name
     })
