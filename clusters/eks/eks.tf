@@ -11,7 +11,9 @@ terraform {
     }
   }
 }
-provider "aws" {}
+provider "aws" {
+  profile = "cilium-testing"
+}
 provider "kubernetes" {
   host                   = module.eks.cluster_endpoint
   cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
@@ -19,7 +21,7 @@ provider "kubernetes" {
     api_version = "client.authentication.k8s.io/v1beta1"
     command     = "aws"
     # This requires the awscli to be installed locally where Terraform is executed
-    args = ["--profile cilium-testing", "eks", "get-token", "--cluster-name", module.eks.cluster_name, "--output", "json"]
+    args = ["--profile=cilium-testing", "eks", "get-token", "--cluster-name", module.eks.cluster_name, "--output", "json"]
   }
 }
 provider "helm" {
@@ -30,7 +32,7 @@ provider "helm" {
       api_version = "client.authentication.k8s.io/v1beta1"
       command     = "aws"
       # This requires the awscli to be installed locally where Terraform is executed
-      args = ["--profile cilium-testing", "eks", "get-token", "--cluster-name", module.eks.cluster_name, "--output", "json"]
+      args = ["--profile=cilium-testing", "eks", "get-token", "--cluster-name", module.eks.cluster_name, "--output", "json"]
     }
   }
 }
@@ -90,6 +92,16 @@ module "eks" {
   subnet_ids                     = module.vpc.private_subnets
   cluster_service_ipv4_cidr      = "10.127.0.0/16"
   cluster_endpoint_public_access = true
+  node_security_group_additional_rules = {
+    ingress_self_all = { # cilium requires many ports to be open node-by-node
+      description = "Node to node all ports/protocols"
+      protocol    = "-1"
+      from_port   = 0
+      to_port     = 0
+      type        = "ingress"
+      self        = true
+    }
+  }
   cloudwatch_log_group_retention_in_days = 1
   attach_cluster_encryption_policy = false
   create_kms_key                   = false
@@ -119,6 +131,9 @@ module "eks" {
     workers-a = {
       name       = "${local.name}-a"
       subnet_ids = [module.vpc.private_subnets[0]]
+      labels = {
+        "technat.dev/egress-node": "true"
+      }
     }
     workers-b = {
       name       = "${local.name}-b"
@@ -151,19 +166,50 @@ resource "null_resource" "purge_aws_networking" {
 }
 resource "helm_release" "cilium" {
   name       = "cilium"
-  repository = "https://helm.cilium.io"
+  repository = "https://helm.isovalent.com"
+  # repository = "https://helm.cilium.io"
   chart      = "cilium"
   version    = "1.14.x"
   namespace  = "kube-system"
   wait       = true
   timeout    = 3600
   values = [
-    templatefile("${path.module}/../../configs/cilium-on-eks.yaml", {
+    # templatefile("${path.module}/../../configs/cilium-on-eks.yaml", {
+    templatefile("${path.module}/../../configs/cilium-ee-on-eks.yaml", {
       cluster_endpoint = trim(module.eks.cluster_endpoint, "https://") # used for kube-proxy replacement
-      name = local.name
+      cluster_name = local.name
     })
   ]
   depends_on = [
     null_resource.purge_aws_networking,
   ]
+}
+
+### Egress gateway "external resource" to query 
+module "ec2_instance" {
+  source  = "terraform-aws-modules/ec2-instance/aws"
+  name = "salami"
+  ami = data.aws_ami.ubuntu.image_id
+  create_spot_instance = true
+  create_iam_instance_profile = true
+  iam_role_policies = {
+     AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
+  }
+  instance_type          = "t2.micro"
+  monitoring             = true
+  vpc_security_group_ids = [module.eks.node_security_group_id]
+  subnet_id              = module.vpc.private_subnets[0] # should be AZ1
+  user_data = <<EOF
+    #!/bin/bash
+    sudo apt install nginx -y
+  EOF
+  tags = local.tags
+}
+data "aws_ami" "ubuntu" {
+  most_recent = true
+  owners      = ["amazon"]
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+  }
 }

@@ -1,18 +1,18 @@
 cluster:
-  name: ${name}
+  name: ${cluster_name}
 
 hubble:
   relay: 
     enabled: true
   ui:
     enabled: true
+
 eni:
   enabled: true
 ipam:
   mode: eni
 routingMode: "native"
-
-enableIPv4Masquerade: true # required for egress gateway
+egressMasqueradeInterfaces: eth0
 
 kubeProxyReplacement: strict
 k8sServicePort: 443
