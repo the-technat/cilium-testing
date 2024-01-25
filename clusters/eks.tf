@@ -107,7 +107,7 @@ module "eks" {
     ami_type       = "AL2_x86_64"
     instance_types = ["t3a.medium", "t3.medium", "t2.medium"]
     ami_id         = data.aws_ami.eks_default.image_id
-    desired_size   = loal.worker_count
+    desired_size   = 1
     iam_role_additional_policies = {
       AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
     }
@@ -116,11 +116,11 @@ module "eks" {
 
   eks_managed_node_groups = {
     workers-a = {
-      name       = "${local.name}-cilium-a"
+      name       = "${local.name}-a"
       subnet_ids = [module.vpc.private_subnets[0]]
     }
     workers-b = {
-      name       = "${local.name}-cilium-b"
+      name       = "${local.name}-b"
       subnet_ids = [module.vpc.private_subnets[1]]
     }
   }
@@ -132,7 +132,7 @@ resource "null_resource" "purge_aws_networking" {
   }
   provisioner "local-exec" {
     command = <<EOT
-      aws eks --region ${local.region} update-kubeconfig --name ${local.name}
+      aws eks --region ${local.region} update-kubeconfig --name ${local.name} --alias ${local.name}
       curl -LO https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl
       chmod 0755 ./kubectl
       ./kubectl -n kube-system delete daemonset kube-proxy --ignore-not-found 
@@ -148,12 +148,12 @@ resource "helm_release" "cilium" {
   name       = "cilium"
   repository = "https://helm.cilium.io"
   chart      = "cilium"
-  version    = "1.14.6"
+  version    = "1.14.x"
   namespace  = "kube-system"
-  wait       = false
+  wait       = true
   timeout    = 3600
   values = [
-    templatefile("${path.module}/configs/cilium-on-eks.yaml", {
+    templatefile("${path.module}/../configs/cilium-on-eks.yaml", {
       cluster_endpoint = trim(module.eks.cluster_endpoint, "https://") # used for kube-proxy replacement
       name = local.name
     })

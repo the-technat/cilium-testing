@@ -10,12 +10,12 @@ eni:
   enabled: true
 ipam:
   mode: eni
+routingMode: "native"
 
-tunnel: disabled
-enableIPv4Masquerade: false
+enableIPv4Masquerade: true # required for egress gateway
 
 kubeProxyReplacement: strict
-k8sServicePort: 6443
+k8sServicePort: 443
 k8sServiceHost: ${cluster_endpoint}
 
 operator:
