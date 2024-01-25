@@ -34,3 +34,7 @@ helm upgrade --install ingress-nginx ingress-nginx \
 
 # goldpinger
 kubectl apply -f goldpinger.yaml
+
+# egress app
+kubectl apply -f egress-policy.yaml
+kubectl apply -f egress-app.yaml

@@ -4,6 +4,7 @@ metadata:
   labels:
     app: fortio
   name: fortio
+  namespace: egress
 spec:
   replicas: 1
   selector:
@@ -20,5 +21,7 @@ spec:
         name: fortio
         args:
         - load 
+        - -t=0
+        - -a
         - -logger-force-color 
-        - http://
+        - http://172.18.0.9
