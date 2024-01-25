@@ -51,3 +51,16 @@ terraform init # uses local file backends
 terraform apply -auto-approve
 aws eks update-kubeconfig --name cilium-testing --alias cilium-testing
 ```
+
+## Egress Gateway
+
+To test the egress gateway feature do the following:
+
+1. Spin up a service that produces access logs and is not behind a NAT
+  - For kind this is as easy as `docker run -d --rm --network kind nginx` (grab the IP of the container)
+  - For EKS: spin up another EC2 instance in the private subnets and install nginx 
+    Note: spinning one up in the public net doesn't make a lot of sense since when trying the public IP
+    EKS is using the NAT gateway, so you would only see the IP of your NAT gateway
+2. Deploy the `workload/egress-app.yaml` after you changed the URL in the YAML to your service
+3. Label one of your nodes with `technat.dev/egress-node=true`
+4. Check the access logs and analyze the IPs seen 

@@ -123,6 +123,10 @@ module "eks" {
       name       = "${local.name}-b"
       subnet_ids = [module.vpc.private_subnets[1]]
     }
+    workers-c = {
+      name       = "${local.name}-c"
+      subnet_ids = [module.vpc.private_subnets[2]]
+    }
   }
   tags = local.tags
 }

@@ -1,2 +1,1 @@
-clusters/.terraform**
-clusters/**.tfstate
+clusters/**terraform**
