@@ -11,12 +11,10 @@ terraform {
     }
   }
 }
-
 provider "aws" {}
 provider "kubernetes" {
   host                   = module.eks.cluster_endpoint
   cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-
   exec {
     api_version = "client.authentication.k8s.io/v1beta1"
     command     = "aws"
@@ -28,7 +26,6 @@ provider "helm" {
   kubernetes {
     host                   = module.eks.cluster_endpoint
     cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-
     exec {
       api_version = "client.authentication.k8s.io/v1beta1"
       command     = "aws"
@@ -37,23 +34,21 @@ provider "helm" {
     }
   }
 }
-
 locals {
   region = "eu-west-1"
   eks_version = "1.28"
   name = "cilium-testing"
   azs  = slice(data.aws_availability_zones.available.names, 0, 3)
-  cidr = "10.123.0.0/16"
+  cidr = "10.10.0.0/16"
   tags = {
     cluster    = local.name
-    repo       = "github.com/the-technat/grapes"
+    repo       = "github.com/the-technat/cilium-testing"
     managed-by = "terraform"
   }
 }
 data "aws_availability_zones" "available" {}
 data "aws_caller_identity" "current" {}
 data "aws_ami" "eks_default" { 
-# use pre-build images by AWS
   most_recent = true
   owners      = ["amazon"]
   filter {
@@ -61,21 +56,16 @@ data "aws_ami" "eks_default" {
     values = ["amazon-eks-node-${local.eks_version}-v*"]
   }
 }
-
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "5.4.0"
-
   name = local.name
   cidr = local.cidr
-
   azs             = local.azs
   public_subnets  = [for k, v in local.azs : cidrsubnet(local.cidr, 8, k)]
   private_subnets = [for k, v in local.azs : cidrsubnet(local.cidr, 8, k + 10)]
-
   enable_nat_gateway = true
   single_nat_gateway = true
-
   # https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.6/deploy/subnet_discovery/
   public_subnet_tags = {
     "kubernetes.io/role/elb" = 1
@@ -83,11 +73,8 @@ module "vpc" {
   private_subnet_tags = {
     "kubernetes.io/role/internal-elb" = 1
   }
-
   tags = local.tags
 }
-
-
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 19.0"
@@ -96,19 +83,16 @@ module "eks" {
   prefix_separator = "" # prevents recreation of the cluster because IAM roles and SGs would otherwise be renamed which triggers a cluster recreation
   cluster_addons = {
     coredns = {
-      addon_version = "v1.9.3-eksbuild.10"
+      most_recent = true
     }
   }
-  # Networking
   vpc_id                         = module.vpc.vpc_id
   subnet_ids                     = module.vpc.private_subnets
   cluster_service_ipv4_cidr      = "10.127.0.0/16"
   cluster_endpoint_public_access = true
-  # KMS
   attach_cluster_encryption_policy = false
   create_kms_key                   = false
   cluster_encryption_config        = {}
-  # IAM
   manage_aws_auth_configmap = true
   aws_auth_users = [
     {
@@ -117,7 +101,6 @@ module "eks" {
       groups   = ["system:masters"]
     },
   ]
-  // settings in this block apply to all nodes groups
   eks_managed_node_group_defaults = {
     # Compute
     capacity_type  = "SPOT"
@@ -125,17 +108,10 @@ module "eks" {
     instance_types = ["t3a.medium", "t3.medium", "t2.medium"]
     ami_id         = data.aws_ami.eks_default.image_id
     desired_size   = loal.worker_count
-
-    # IAM
     iam_role_additional_policies = {
       AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
     }
-
-    // required since we specify the AMI to use
-    // otherwise the nodes don't join
-    // setting also assume the default eks image is used
     enable_bootstrap_user_data = true
-
   }
 
   eks_managed_node_groups = {
@@ -150,7 +126,6 @@ module "eks" {
   }
   tags = local.tags
 }
-
 resource "null_resource" "purge_aws_networking" {
   triggers = {
     eks = module.eks.cluster_endpoint # only do this when the cluster changes (e.g create/recreate)
@@ -169,7 +144,6 @@ resource "null_resource" "purge_aws_networking" {
   # That's why it's enough to delete them once as soon as the control-plane is ready
   depends_on = [ module.eks.aws_eks_cluster, ] 
 }
-
 resource "helm_release" "cilium" {
   name       = "cilium"
   repository = "https://helm.cilium.io"
@@ -178,32 +152,13 @@ resource "helm_release" "cilium" {
   namespace  = "kube-system"
   wait       = false
   timeout    = 3600
-
   values = [
-    <<EOT
-        hubble:
-          relay: 
-            enabled: true
-        eni:
-          enabled: true
-        ipam:
-          mode: eni
-        tunnel: disabled
-        enableIPv4Masquerade: false
-        kubeProxyReplacement: strict
-        k8sServicePort: 6443  
-    EOT
+    templatefile("${path.module}/configs/cilium-on-eks.yaml", {
+      cluster_endpoint = trim(module.eks.cluster_endpoint, "https://") # used for kube-proxy replacement
+      name = local.name
+    })
   ]
-  
-  set {
-    name  = "k8sServiceHost"
-    value = trim(module.eks.cluster_endpoint, "https://")
-    type  = "string"
-  }
- 
-
   depends_on = [
     null_resource.purge_aws_networking,
   ]
 }
-
