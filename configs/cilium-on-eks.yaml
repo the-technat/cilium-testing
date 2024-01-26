@@ -12,7 +12,6 @@ eni:
 ipam:
   mode: eni
 routingMode: "native"
-egressMasqueradeInterfaces: eth0
 
 kubeProxyReplacement: strict
 k8sServicePort: 443
@@ -21,11 +20,12 @@ k8sServiceHost: ${cluster_endpoint}
 operator:
   replicas: 1
 
-egressGateway:
-  enabled: true
-  installRoutes: true
-
 bpf:
   masquerade: true
 
 l7Proxy: false
+
+enableIPv4Masquerade: true
+egressGateway:
+  enabled: true
+  installRoutes: true

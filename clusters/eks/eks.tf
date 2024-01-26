@@ -125,24 +125,21 @@ module "eks" {
       AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
     }
     enable_bootstrap_user_data = true
+    subnet_ids = module.vpc.private_subnets
   }
 
   eks_managed_node_groups = {
-    workers-a = {
-      name       = "${local.name}-a"
-      subnet_ids = [module.vpc.private_subnets[0]]
-      labels = {
+    workers = {
+      name       = "workers"
+    }
+    gateways = {
+      name       = "gateways"
+      subnet_ids = module.vpc.private_subnets
+        labels = {
         "technat.dev/egress-node": "true"
       }
     }
-    workers-b = {
-      name       = "${local.name}-b"
-      subnet_ids = [module.vpc.private_subnets[1]]
-    }
-    workers-c = {
-      name       = "${local.name}-c"
-      subnet_ids = [module.vpc.private_subnets[2]]
-    }
+
   }
   tags = local.tags
 }
@@ -189,7 +186,6 @@ resource "helm_release" "cilium" {
 module "ec2_instance" {
   source  = "terraform-aws-modules/ec2-instance/aws"
   name = "salami"
-  ami = data.aws_ami.ubuntu.image_id
   create_spot_instance = true
   create_iam_instance_profile = true
   iam_role_policies = {
@@ -201,15 +197,20 @@ module "ec2_instance" {
   subnet_id              = module.vpc.private_subnets[0] # should be AZ1
   user_data = <<EOF
     #!/bin/bash
-    sudo apt install nginx -y
+    sudo yum update -y
+    sudo amazon-linux-extras install nginx1 -y 
+    sudo systemctl enable nginx
+    sudo systemctl start nginx
   EOF
   tags = local.tags
 }
-data "aws_ami" "ubuntu" {
-  most_recent = true
-  owners      = ["amazon"]
-  filter {
-    name   = "name"
-    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+resource "kubernetes_service_v1" "external_example_service" {
+   metadata {
+    name = "external-example-service"
+    namespace = "default"
+  }
+  spec {
+    type = "ExternalName"
+    external_name = module.ec2_instance.private_ip
   }
 }

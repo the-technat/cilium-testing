@@ -30,7 +30,8 @@ spec:
         - -t=0
         - -a
         - -logger-force-color 
-        - http://10.10.10.201
+        # - http://external-example-service.default.svc.cluster.local
+        - http://10.10.10.76
 ---
 apiVersion: isovalent.com/v1
 kind: IsovalentEgressGatewayPolicy
@@ -40,8 +41,8 @@ spec:
   selectors:
   - podSelector:
       matchLabels:
-        # io.kubernetes.pod.namespace: egress\
-        app: fortio
+        io.kubernetes.pod.namespace: egress
+        # app: fortio
 
   # Specify which destination CIDR(s) this policy applies to.
   # Multiple CIDRs can be specified.
