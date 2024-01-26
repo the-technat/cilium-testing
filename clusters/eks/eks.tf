@@ -135,8 +135,15 @@ module "eks" {
     gateways = {
       name       = "gateways"
       subnet_ids = module.vpc.private_subnets
-        labels = {
+      labels = {
         "technat.dev/egress-node": "true"
+      }
+      taints = {
+        egress-nodes = {
+          key    = "technat.dev/egress-node"
+          value  = "true"
+          effect = "NO_SCHEDULE"
+        }
       }
     }
 
