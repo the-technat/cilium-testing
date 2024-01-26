@@ -31,7 +31,7 @@ spec:
         - -a
         - -logger-force-color 
         # - http://external-example-service.default.svc.cluster.local
-        - http://10.10.10.76
+        - http://172.18.0.9
 ---
 apiVersion: cilium.io/v2
 kind: CiliumEgressGatewayPolicy
@@ -55,7 +55,7 @@ spec:
 
     # Specify the IP address used to SNAT traffic matched by the policy.
     # It must exist as an IP associated with a network interface on the instance.
-    # egressIP: 10.244.4.112
+    egressIP: 10.244.4.112
 
     # Alternatively it's possible to specify the interface to be used for egress traffic.
     # In this case the first IPv4 assigned to that interface will be used as egress IP.

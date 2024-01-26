@@ -12,7 +12,7 @@ To create a new kind cluster I just do:
 
 ```
 kind create cluster --config clusters/kind/kind.yaml
-helm upgrade -i cilium --repo https://helm.cilium.io -n kube-system cilium/cilium -f configs/cilium-on-kind.yaml
+helm upgrade -i cilium --repo https://helm.cilium.io -n kube-system cilium/cilium -f configs/kind-default.yaml
 
 # Ingress (optional)
 helm upgrade -i metallb --repo https://metallb.github.io/metallb --create-namespace -n metallb metallb/metallb

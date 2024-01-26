@@ -37,20 +37,22 @@ provider "helm" {
   }
 }
 locals {
-  region = "eu-west-1"
+  region      = "eu-west-1"
   eks_version = "1.28"
-  name = "cilium-testing"
-  azs  = slice(data.aws_availability_zones.available.names, 0, 3)
-  cidr = "10.10.0.0/16"
+  name        = "cilium-testing"
+  azs         = slice(data.aws_availability_zones.available.names, 0, 3)
+  cidr        = "10.10.0.0/16"
   tags = {
     cluster    = local.name
     repo       = "github.com/the-technat/cilium-testing"
     managed-by = "terraform"
   }
+  cilium_config = "egress-ee-eks.yaml"
+  cilium_repo   = "https://helm.isovalent.com"
 }
 data "aws_availability_zones" "available" {}
 data "aws_caller_identity" "current" {}
-data "aws_ami" "eks_default" { 
+data "aws_ami" "eks_default" {
   most_recent = true
   owners      = ["amazon"]
   filter {
@@ -59,13 +61,13 @@ data "aws_ami" "eks_default" {
   }
 }
 module "vpc" {
-  source  = "terraform-aws-modules/vpc/aws"
-  version = "5.4.0"
-  name = local.name
-  cidr = local.cidr
-  azs             = local.azs
-  public_subnets  = [for k, v in local.azs : cidrsubnet(local.cidr, 8, k)]
-  private_subnets = [for k, v in local.azs : cidrsubnet(local.cidr, 8, k + 10)]
+  source             = "terraform-aws-modules/vpc/aws"
+  version            = "5.4.0"
+  name               = local.name
+  cidr               = local.cidr
+  azs                = local.azs
+  public_subnets     = [for k, v in local.azs : cidrsubnet(local.cidr, 8, k)]
+  private_subnets    = [for k, v in local.azs : cidrsubnet(local.cidr, 8, k + 10)]
   enable_nat_gateway = true
   single_nat_gateway = true
   # https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.6/deploy/subnet_discovery/
@@ -78,8 +80,8 @@ module "vpc" {
   tags = local.tags
 }
 module "eks" {
-  source  = "terraform-aws-modules/eks/aws"
-  version = "~> 19.0"
+  source           = "terraform-aws-modules/eks/aws"
+  version          = "~> 19.0"
   cluster_name     = local.name
   cluster_version  = local.eks_version
   prefix_separator = "" # prevents recreation of the cluster because IAM roles and SGs would otherwise be renamed which triggers a cluster recreation
@@ -103,10 +105,10 @@ module "eks" {
     }
   }
   cloudwatch_log_group_retention_in_days = 1
-  attach_cluster_encryption_policy = false
-  create_kms_key                   = false
-  cluster_encryption_config        = {}
-  manage_aws_auth_configmap = true
+  attach_cluster_encryption_policy       = false
+  create_kms_key                         = false
+  cluster_encryption_config              = {}
+  manage_aws_auth_configmap              = true
   aws_auth_users = [
     {
       userarn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/${local.name}"
@@ -125,18 +127,18 @@ module "eks" {
       AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
     }
     enable_bootstrap_user_data = true
-    subnet_ids = module.vpc.private_subnets
+    subnet_ids                 = module.vpc.private_subnets
   }
 
   eks_managed_node_groups = {
     workers = {
-      name       = "workers"
+      name = "workers"
     }
     gateways = {
       name       = "gateways"
       subnet_ids = module.vpc.private_subnets
       labels = {
-        "technat.dev/egress-node": "true"
+        "technat.dev/egress-node" : "true"
       }
       taints = {
         egress-nodes = {
@@ -166,22 +168,20 @@ resource "null_resource" "purge_aws_networking" {
   }
   # Note: we don't deploy the addons using TF, but the resources are still there on cluster creation
   # That's why it's enough to delete them once as soon as the control-plane is ready
-  depends_on = [ module.eks.aws_eks_cluster, ] 
+  depends_on = [module.eks.aws_eks_cluster, ]
 }
 resource "helm_release" "cilium" {
   name       = "cilium"
-  repository = "https://helm.isovalent.com"
-  # repository = "https://helm.cilium.io"
+  repository = local.cilium_repo
   chart      = "cilium"
   version    = "1.14.x"
   namespace  = "kube-system"
   wait       = true
   timeout    = 3600
   values = [
-    # templatefile("${path.module}/../../configs/cilium-on-eks.yaml", {
-    templatefile("${path.module}/../../configs/cilium-ee-on-eks.yaml", {
+    templatefile("${path.module}/../../configs/${local.cilium_config}", {
       cluster_endpoint = trim(module.eks.cluster_endpoint, "https://") # used for kube-proxy replacement
-      cluster_name = local.name
+      cluster_name     = local.name
     })
   ]
   depends_on = [
@@ -191,33 +191,33 @@ resource "helm_release" "cilium" {
 
 ### Egress gateway "external resource" to query 
 module "ec2_instance" {
-  source  = "terraform-aws-modules/ec2-instance/aws"
-  name = "salami"
-  create_spot_instance = true
+  source                      = "terraform-aws-modules/ec2-instance/aws"
+  name                        = "salami"
+  create_spot_instance        = true
   create_iam_instance_profile = true
   iam_role_policies = {
-     AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
+    AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
   }
   instance_type          = "t2.micro"
   monitoring             = true
   vpc_security_group_ids = [module.eks.node_security_group_id]
   subnet_id              = module.vpc.private_subnets[0] # should be AZ1
-  user_data = <<EOF
+  user_data              = <<EOF
     #!/bin/bash
     sudo yum update -y
     sudo amazon-linux-extras install nginx1 -y 
     sudo systemctl enable nginx
     sudo systemctl start nginx
   EOF
-  tags = local.tags
+  tags                   = local.tags
 }
 resource "kubernetes_service_v1" "external_example_service" {
-   metadata {
-    name = "external-example-service"
+  metadata {
+    name      = "external-example-service"
     namespace = "default"
   }
   spec {
-    type = "ExternalName"
+    type          = "ExternalName"
     external_name = module.ec2_instance.private_ip
   }
 }
