@@ -212,13 +212,13 @@ module "ec2_instance" {
   EOF
   tags                   = local.tags
 }
-resource "kubernetes_service_v1" "external_example_service" {
-  metadata {
-    name      = "external-example-service"
-    namespace = "default"
-  }
-  spec {
-    type          = "ExternalName"
-    external_name = module.ec2_instance.private_ip
-  }
-}
+# resource "kubernetes_service_v1" "external_example_service" {
+#   metadata {
+#     name      = "external-example-service"
+#     namespace = "default"
+#   }
+#   spec {
+#     type          = "ExternalName"
+#     external_name = module.ec2_instance.private_ip
+#   }
+# }
