@@ -12,8 +12,9 @@ terraform {
   }
 }
 provider "aws" {
-  profile = "cilium-testing"
+  region = "eu-west-1"
 }
+
 provider "kubernetes" {
   host                   = module.eks.cluster_endpoint
   cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
@@ -21,7 +22,7 @@ provider "kubernetes" {
     api_version = "client.authentication.k8s.io/v1beta1"
     command     = "aws"
     # This requires the awscli to be installed locally where Terraform is executed
-    args = ["--profile=cilium-testing", "eks", "get-token", "--cluster-name", module.eks.cluster_name, "--output", "json"]
+    args = ["eks", "get-token", "--cluster-name", module.eks.cluster_name, "--output", "json"]
   }
 }
 provider "helm" {
@@ -32,7 +33,7 @@ provider "helm" {
       api_version = "client.authentication.k8s.io/v1beta1"
       command     = "aws"
       # This requires the awscli to be installed locally where Terraform is executed
-      args = ["--profile=cilium-testing", "eks", "get-token", "--cluster-name", module.eks.cluster_name, "--output", "json"]
+      args = ["eks", "get-token", "--cluster-name", module.eks.cluster_name, "--output", "json"]
     }
   }
 }
@@ -158,7 +159,7 @@ resource "null_resource" "purge_aws_networking" {
   }
   provisioner "local-exec" {
     command = <<EOT
-      aws --profile cilium-testing eks --region ${local.region} update-kubeconfig --name ${local.name} --alias ${local.name}
+      aws eks --region ${local.region} update-kubeconfig --name ${local.name} --alias ${local.name}
       curl -LO https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl
       chmod 0755 ./kubectl
       ./kubectl -n kube-system delete daemonset kube-proxy --ignore-not-found 

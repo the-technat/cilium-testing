@@ -45,11 +45,11 @@ EKS is a unicorn when it comes to Kubernetes Networking. That's why I usually te
 To spin up a cluster, I use Terraform:
 
 ```
-aws configure --profile cilium-testing # use either assume-role or aws creds
+aws configure # use either assume-role or aws creds
 cd clusters/eks
 terraform init # uses local file backends
 terraform apply -auto-approve
-aws eks update-kubeconfig --profile cilium-testing --name cilium-testing --alias cilium-testing
+aws eks update-kubeconfig --name cilium-testing --alias cilium-testing
 ```
 
 ## Egress Gateway
