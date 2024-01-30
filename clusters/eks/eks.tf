@@ -110,10 +110,17 @@ module "eks" {
   create_kms_key                         = false
   cluster_encryption_config              = {}
   manage_aws_auth_configmap              = true
-  aws_auth_users = [
+  # aws_auth_users = [
+  #   {
+  #     userarn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/${local.name}"
+  #     username = local.name
+  #     groups   = ["system:masters"]
+  #   },
+  # ]
+  aws_auth_roles = [
     {
-      userarn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/${local.name}"
-      username = local.name
+      rolearn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/Z-AWS-M98LN0042-PE"
+      username = "Z-AWS-M98LN0042-PE"
       groups   = ["system:masters"]
     },
   ]
