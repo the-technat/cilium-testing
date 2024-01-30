@@ -30,8 +30,7 @@ spec:
         - -t=0
         - -a
         - -logger-force-color 
-        # - http://external-example-service.default.svc.cluster.local
-        - http://172.18.0.9
+        - http://external-example-service.default.svc.cluster.local
 ---
 apiVersion: isovalent.com/v1
 kind: IsovalentEgressGatewayPolicy

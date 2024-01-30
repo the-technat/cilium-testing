@@ -175,7 +175,7 @@ resource "helm_release" "cilium" {
   name       = "cilium"
   repository = local.cilium_repo
   chart      = "cilium"
-  version    = "1.14.x"
+  version    = "1.14.6"
   namespace  = "kube-system"
   wait       = true
   timeout    = 3600
@@ -219,6 +219,8 @@ resource "kubernetes_service_v1" "external_example_service" {
   }
   spec {
     type          = "ExternalName"
-    external_name = module.ec2_instance.private_ip
+    external_name = module.ec2_instance.private_dns
   }
+
+  depends_on = [ module.eks, helm_release.cilium, ]
 }
