@@ -178,20 +178,9 @@ module "ec2_instance" { # EC2 instance with access logs to analyze
   user_data              = <<EOF
     #!/bin/bash
     sudo yum update -y
-    sudo amazon-linux-extras install nginx1 -y 
-    sudo systemctl enable --now nginx
-    cat <<EOT | sudo tee /etc/cloudwatch-logs.conf
-      [general]
-      state_file = /var/awslogs/state/agent-state
-      [/var/log/nginx/access.log]
-      file = /var/log/nginx/access.log
-      log_group_name = /var/log/nginx/access.log
-      log_stream_name = {instance_id}
-      datetime_format = %b %d %H:%M:%S
-    EOT
-    curl https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py -O
-    chmod +x ./awslogs-agent-setup.py
-    ./awslogs-agent-setup.py -n -r ${local.region} -c /etc/cloudwatch-logs.conf
+    sudo amazon-linux-extras install docker -y 
+    sudo systemctl start --now docker
+    docker run -p 80:80 cilium/echoserver
   EOF
 }
 resource "kubernetes_service_v1" "external_example_service" {
@@ -203,5 +192,5 @@ resource "kubernetes_service_v1" "external_example_service" {
     type          = "ExternalName"
     external_name = module.ec2_instance.private_dns
   }
-  depends_on = [ module.eks, helm_release.cilium, ]
+  depends_on = [ module.eks, module.ec2_instance ]
 }

@@ -8,29 +8,24 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: fortio
-  name: fortio
+    app: ubuntu
+  name: ubuntu
   namespace: egress
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: fortio
+      app: ubuntu
   strategy: {}
   template:
     metadata:
       labels:
-        app: fortio
+        app: ubuntu
     spec:
       containers:
-      - image: fortio/fortio
-        name: fortio
-        args:
-        - load 
-        - -t=0
-        - -a
-        - -logger-force-color 
-        - http://external-example-service.default.svc.cluster.local
+      - image: ubuntu:latest
+        name: ubuntu
+        command: ["/bin/bash", "-ec", "while true; do curl -fsSL http://external-example-service.default.svc.cluster.local; sleep 1 ; done"]
 ---
 apiVersion: isovalent.com/v1
 kind: IsovalentEgressGatewayPolicy
