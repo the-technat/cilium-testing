@@ -56,11 +56,12 @@ aws eks update-kubeconfig --name cilium-testing --alias cilium-testing
 
 To test the egress gateway feature do the following:
 
+0. Spin up a cluster (either clusters/kind or clusters/eks-egress)
 1. Spin up a service that produces access logs and is not behind a NAT
-  - For kind this is as easy as `docker run -d --rm --network kind cilium/echoserver` (grab the IP of the container)
-  - For EKS: spin up another EC2 instance in the private subnet, instal docker and run the same container as above
-    Note: spinning one up in the public net doesn't make a lot of sense since when trying the public IP
-    EKS is using the NAT gateway...
-2. Deploy the `workload/egress-app.yaml` after you changed the URL in the YAML to your service
-3. Label one of your nodes with `technat.dev/egress-node=true`
-4. Check the logs using `kubectl logs -n egress deploy/ubuntu` and analyze the IPs seen 
+  - For kind this is as easy as:
+    - `docker run --name echoserver -d --rm --network kind cilium/echoserver` 
+    - `kubectl create svc externalname external-example-service -n default --external-name echoserver`
+  - For EKS: spin up another EC2 instance in the private subnet, instal docker and run the same container as above (or look at clusters/eks-egress/eks.tf at the bottom)
+3. Deploy the `workload/egress-app.yaml`
+4. Label one of your nodes with `technat.dev/egress-node=true` (ar maybe they are already labeled)
+5. Check the logs using `kubectl logs -n egress deploy/curl` and analyze the IPs seen 

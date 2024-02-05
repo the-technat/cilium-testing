@@ -8,24 +8,24 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: ubuntu
-  name: ubuntu
+    app: curl
+  name: curl
   namespace: egress
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: ubuntu
+      app: curl
   strategy: {}
   template:
     metadata:
       labels:
-        app: ubuntu
+        app: curl
     spec:
       containers:
-      - image: ubuntu:latest
-        name: ubuntu
-        command: ["/bin/bash", "-ec", "while true; do curl -fsSL http://external-example-service.default.svc.cluster.local; sleep 1 ; done"]
+      - image: curlimages/curl
+        name: curl
+        command: ["/bin/sh", "-ec", "while true; do curl -fsSL http://external-example-service.default.svc.cluster.local; sleep 1 ; done"]
 ---
 apiVersion: cilium.io/v2
 kind: CiliumEgressGatewayPolicy

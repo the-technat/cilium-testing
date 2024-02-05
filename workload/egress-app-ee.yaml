@@ -8,24 +8,24 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: ubuntu
-  name: ubuntu
+    app: curl
+  name: curl
   namespace: egress
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: ubuntu
+      app: curl
   strategy: {}
   template:
     metadata:
       labels:
-        app: ubuntu
+        app: curl
     spec:
       containers:
-      - image: ubuntu:latest
-        name: ubuntu
-        command: ["/bin/bash", "-ec", "while true; do curl -fsSL http://external-example-service.default.svc.cluster.local; sleep 1 ; done"]
+      - image: curlimages/curl
+        name: curl
+        command: ["/bin/sh", "-ec", "while true; do curl -fsSL http://external-example-service.default.svc.cluster.local; sleep 1 ; done"]
 ---
 apiVersion: isovalent.com/v1
 kind: IsovalentEgressGatewayPolicy
@@ -51,7 +51,7 @@ spec:
 
     # Specify the IP address used to SNAT traffic matched by the policy.
     # It must exist as an IP associated with a network interface on the instance.
-    egressIP: 172.18.0.100
+    # egressIP: 172.18.0.100
 
     # Alternatively it's possible to specify the interface to be used for egress traffic.
     # In this case the first IPv4 assigned to that interface will be used as egress IP.
