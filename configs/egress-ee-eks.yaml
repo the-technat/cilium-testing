@@ -20,12 +20,11 @@ k8sServiceHost: ${cluster_endpoint}
 operator:
   replicas: 1
 
+l7Proxy: false
+enableIPv4Masquerade: true
 bpf:
   masquerade: true
 
-l7Proxy: false
-
-enableIPv4Masquerade: true
 enterprise:
   # -- Enables egress gateway HA
   egressGatewayHA:
