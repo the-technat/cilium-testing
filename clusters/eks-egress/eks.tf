@@ -114,6 +114,7 @@ module "eks" {
     }
     gateways = {
       name       = "gateways"
+      desired_size = 2
       labels = {
         "technat.dev/egress-node" : "true"
       }
@@ -180,7 +181,8 @@ module "ec2_instance" { # EC2 instance with access logs to analyze
     sudo yum update -y
     sudo amazon-linux-extras install docker -y 
     sudo systemctl start --now docker
-    docker run -p 80:80 cilium/echoserver
+    sudo usermod -aG docker ssm-user
+    docker run -d --name echoserver -p 80:80 cilium/echoserver
   EOF
 }
 resource "kubernetes_service_v1" "external_example_service" {

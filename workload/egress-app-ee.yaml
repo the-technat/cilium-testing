@@ -37,7 +37,6 @@ spec:
       matchLabels:
         io.kubernetes.pod.namespace: egress
         
-
   # Specify which destination CIDR(s) this policy applies to.
   # Multiple CIDRs can be specified.
   destinationCIDRs:
