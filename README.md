@@ -61,7 +61,7 @@ To test the egress gateway feature do the following:
   - For kind this is as easy as:
     - `docker run --name echoserver -d --rm --network kind cilium/echoserver` 
     - `kubectl create svc externalname external-example-service -n default --external-name echoserver`
-  - For EKS: spin up another EC2 instance in the private subnet, instal docker and run the same container as above (or look at clusters/eks-egress/eks.tf at the bottom)
+  - For EKS: spin up another EC2 instance in the private subnet, install docker and run the same container as above (or look at clusters/eks-egress/eks.tf at the bottom)
 3. Deploy the `workload/egress-app.yaml`
-4. Label one of your nodes with `technat.dev/egress-node=true` (ar maybe they are already labeled)
+4. Label one of your nodes with `technat.dev/egress-node=true` (or maybe they are already labeled)
 5. Check the logs using `kubectl logs -n egress deploy/curl` and analyze the IPs seen 
